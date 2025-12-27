@@ -245,15 +245,15 @@ impl Utils {
         max_characters: u32,
         existing_text: Option<&str>,
         dismissed_cb: F,
-    ) -> bool
+    ) -> (bool, CallbackHandle)
     where
         F: FnMut(GamepadTextInputDismissed) + 'static + Send,
     {
         unsafe {
             let description = CString::new(description).unwrap();
             let existing_text = existing_text.map(|s| CString::new(s).unwrap());
-            register_callback(&self._inner, dismissed_cb);
-            sys::SteamAPI_ISteamUtils_ShowGamepadTextInput(
+            let handle = register_callback(&self._inner, dismissed_cb);
+            let result = sys::SteamAPI_ISteamUtils_ShowGamepadTextInput(
                 self.utils,
                 input_mode.into(),
                 input_line_mode.into(),
@@ -263,7 +263,8 @@ impl Utils {
                     .as_ref()
                     .map(|s| s.as_ptr())
                     .unwrap_or(std::ptr::null()),
-            )
+            );
+            (result, handle)
         }
     }
 
@@ -281,22 +282,23 @@ impl Utils {
         width: i32,
         height: i32,
         mut dismissed_cb: F,
-    ) -> bool
+    ) -> (bool, CallbackHandle)
     where
         F: FnMut() + 'static + Send, // TODO: Support FnOnce callbacks
     {
         unsafe {
-            register_callback(&self._inner, move |_: FloatingGamepadTextInputDismissed| {
+            let handle = register_callback(&self._inner, move |_: FloatingGamepadTextInputDismissed| {
                 dismissed_cb();
             });
-            sys::SteamAPI_ISteamUtils_ShowFloatingGamepadTextInput(
+            let result = sys::SteamAPI_ISteamUtils_ShowFloatingGamepadTextInput(
                 self.utils,
                 keyboard_mode.into(),
                 x,
                 y,
                 width,
                 height,
-            )
+            );
+            (result, handle)
         }
     }
 }
